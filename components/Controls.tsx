@@ -10,7 +10,13 @@ const Controls: React.FC<ControlsProps> = ({ onDirectionChange }) => {
   const btnClass = "w-14 h-14 flex items-center justify-center bg-[#0d1626]/90 hover:bg-[#132238] active:bg-emerald-600/80 active:scale-90 rounded-2xl border-2 border-teal-600/50 active:border-emerald-400 shadow-[0_4px_14px_rgba(0,0,0,0.5),0_0_12px_rgba(13,148,136,0.3)] transition-all touch-manipulation cursor-pointer select-none";
 
   return (
-    <div className="flex flex-col items-center mt-4 md:hidden w-full">
+    <div className="flex flex-col items-center mt-3 md:hidden w-full">
+      {/* Positioned directly above buttons so thumb never covers it */}
+      <div className="flex items-center gap-1.5 mb-2.5 px-3 py-1 bg-teal-950/70 border border-teal-800/50 rounded-full shadow-sm">
+        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
+        <span className="text-[9px] text-teal-300 font-mono tracking-wider font-bold">SWIPE BOARD OR TAP ARROWS</span>
+      </div>
+
       <div className="grid grid-cols-3 gap-2 max-w-[190px] mx-auto">
         <div className="col-start-2 flex justify-center">
           <button 
@@ -61,7 +67,6 @@ const Controls: React.FC<ControlsProps> = ({ onDirectionChange }) => {
           </button>
         </div>
       </div>
-      <p className="text-[10px] text-teal-400/70 font-mono tracking-widest mt-2">SWIPE BOARD OR TAP BUTTONS</p>
     </div>
   );
 };

@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "HighScore": {
+      "title": "HighScore",
+      "description": "A global arcade leaderboard high score entry",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Player initials or arcade tag (1 to 5 uppercase characters)",
+          "minLength": 1,
+          "maxLength": 5
+        },
+        "score": {
+          "type": "number",
+          "description": "Total game score points achieved"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the high score was recorded"
+        }
+      },
+      "required": [
+        "name",
+        "score",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/leaderboard/{scoreId}": {
+      "schema": "HighScore",
+      "description": "Global arcade leaderboard collection storing player scores"
+    }
+  }
+}

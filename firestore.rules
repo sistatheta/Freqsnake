@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Validation helpers
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidHighScore(data) {
+      return data.keys().hasAll(['name', 'score', 'createdAt'])
+        && data.keys().hasOnly(['name', 'score', 'createdAt'])
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 5
+        && data.score is number
+        && data.score >= 0
+        && data.score <= 100000
+        && data.createdAt == request.time;
+    }
+
+    // Public arcade leaderboard
+    match /leaderboard/{scoreId} {
+      // Global read: Anyone across the world can view the leaderboard
+      allow read: if true;
+
+      // Create: Validated append-only score submission
+      allow create: if isValidId(scoreId) && isValidHighScore(incoming());
+
+      // Immutable: Prevent tampering with existing high scores
+      allow update, delete: if false;
+    }
+  }
+}

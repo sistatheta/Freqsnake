@@ -4,6 +4,7 @@ import { Direction, Point, GameItem, ItemType, HighScoreEntry } from './types';
 import { GRID_SIZE, INITIAL_SPEED, KEY_MAP, SPEED_INCREMENT, MIN_SPEED, PROGRESSIONS } from './constants';
 import { getGameOverCommentary } from './services/geminiService';
 import { audioService, PlayedNoteInfo } from './services/audioService';
+import { subscribeToGlobalLeaderboard, addGlobalHighScore, validateFirestoreConnection } from './services/firebase';
 import GameBoard from './components/GameBoard';
 import Controls from './components/Controls';
 import Visualizer from './components/Visualizer';
@@ -79,9 +80,21 @@ const App: React.FC = () => {
   useEffect(() => { reverbRef.current = reverbActive; }, [reverbActive]);
   useEffect(() => { delayRef.current = delayActive; }, [delayActive]);
 
-  // Warm up audio service gently
+  // Warm up audio service & subscribe to live worldwide leaderboard
   useEffect(() => {
     audioService.initialize();
+    validateFirestoreConnection();
+
+    // Subscribe to live worldwide leaderboard from Firebase Firestore
+    const unsubscribe = subscribeToGlobalLeaderboard((globalEntries) => {
+      if (globalEntries && globalEntries.length > 0) {
+        setLeaderboard(globalEntries);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const resetGame = () => {
@@ -123,13 +136,15 @@ const App: React.FC = () => {
     audioService.toggleDelay(false);
   };
 
-  const saveHighScore = (name: string) => {
+  const saveHighScore = async (name: string) => {
+    const trimmed = name.toUpperCase().slice(0, 5);
     const newEntry: HighScoreEntry = {
-      name: name.toUpperCase().slice(0, 5),
+      name: trimmed,
       score,
       timestamp: Date.now()
     };
     
+    // Save locally for instant feedback
     const newLeaderboard = [...leaderboard, newEntry]
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
@@ -137,6 +152,13 @@ const App: React.FC = () => {
     setLeaderboard(newLeaderboard);
     localStorage.setItem('freqSnakeLeaderboard', JSON.stringify(newLeaderboard));
     setHasSavedScoreInModal(true);
+
+    // Persist to real-time worldwide Firebase Firestore
+    try {
+      await addGlobalHighScore(trimmed, score);
+    } catch (err) {
+      console.warn("Could not save to global leaderboard:", err);
+    }
   };
 
   const handleModalSave = (e: React.FormEvent) => {
@@ -349,14 +371,17 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#070a12] text-white font-sans flex flex-col items-center justify-start py-3 sm:py-4 px-3 sm:px-4">
       
       {/* Outer Wrapper with Unified Width */}
-      <div className="w-full max-w-[640px] flex flex-col gap-3 sm:gap-4">
+      <div className="w-full max-w-[640px] md:max-w-[720px] flex flex-col gap-3 sm:gap-4">
         
-        {/* Top Banner Marquee (Responsive height on mobile) */}
+        {/* Semantic SEO Heading for Search Engines */}
+        <h1 className="sr-only">Play Snake Online Free — Freq Snake Retro Synth Arcade</h1>
+
+        {/* Top Banner Marquee (Responsive height: sleek on mobile, grand on desktop) */}
         <div className="w-full relative overflow-hidden rounded-2xl border-2 border-teal-700/50 shadow-[0_0_35px_rgba(13,148,136,0.35)] bg-[#070b14] group">
           <img 
             src="/assets/aistudio/freqsnake-banner_7806c86a.jpg" 
             alt="Freq Snake Arcade Banner" 
-            className="w-full h-auto max-h-24 sm:max-h-48 object-contain bg-[#070b14] mx-auto select-none block"
+            className="w-full h-auto max-h-24 sm:max-h-44 md:max-h-64 object-contain bg-[#070b14] mx-auto select-none block transition-all"
             draggable={false}
           />
         </div>
@@ -368,9 +393,7 @@ const App: React.FC = () => {
           <div className="w-full md:w-64 flex flex-col items-center md:items-start gap-3 order-2 md:order-1">
              <Leaderboard 
                 entries={leaderboard} 
-                currentScore={score} 
-                isGameOver={isGameOver} 
-                onSave={saveHighScore}
+                currentScore={score}
              />
              
              <div className="hidden md:flex flex-col gap-2 text-xs text-teal-300/70 font-mono bg-[#0b101d]/90 p-3 rounded-xl border border-teal-900/50 w-full shadow-lg">
