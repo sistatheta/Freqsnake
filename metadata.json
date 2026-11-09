@@ -1,0 +1,6 @@
+{
+  "name": "Freq Snake",
+  "description": "A rhythmic snake game where eating food creates music with selectable chord progressions and audio effects.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
