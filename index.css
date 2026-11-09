@@ -2,6 +2,17 @@
 html, body {
   margin: 0;
   padding: 0;
-  background-color: #111827;
+  background-color: #0a0e17;
   color: #ffffff;
+}
+
+/* Hide Netlify drawer, feedback widget, and preview badges */
+#netlify-drawer,
+[data-netlify-drawer],
+.netlify-drawer,
+iframe#netlify-drawer-iframe,
+[class*="netlify-drawer"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
