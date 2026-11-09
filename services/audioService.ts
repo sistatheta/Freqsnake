@@ -1,4 +1,10 @@
-import { PROGRESSIONS } from '../constants';
+import { PROGRESSIONS, MelodicNote } from '../constants';
+
+export interface PlayedNoteInfo {
+  freq: number;
+  note: string;
+  chordName: string;
+}
 
 class AudioService {
   private ctx: AudioContext | null = null;
@@ -14,19 +20,20 @@ class AudioService {
   
   // Progression State
   private currentProgressionId: string = 'pop-anthem';
-  private currentChordIndex: number = 0;
 
   public initialize() {
     if (this.ctx) return;
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    this.ctx = new AudioCtx();
     
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.3;
+    this.masterGain.gain.value = 0.35;
     
     // Setup Analyser
     this.analyser = this.ctx.createAnalyser();
-    this.analyser.fftSize = 2048; // Larger buffer for smoother waves
-    this.analyser.smoothingTimeConstant = 0.8;
+    this.analyser.fftSize = 1024;
+    this.analyser.smoothingTimeConstant = 0.75;
     
     // Master -> Analyser -> Destination
     this.masterGain.connect(this.analyser);
@@ -44,9 +51,9 @@ class AudioService {
 
     // Setup Delay
     this.delayNode = this.ctx.createDelay();
-    this.delayNode.delayTime.value = 0.3; // 300ms delay
+    this.delayNode.delayTime.value = 0.28;
     this.delayFeedback = this.ctx.createGain();
-    this.delayFeedback.gain.value = 0.4;
+    this.delayFeedback.gain.value = 0.45;
 
     // Delay Loop: Source -> Delay -> Feedback -> Delay
     this.delayNode.connect(this.delayFeedback);
@@ -57,7 +64,7 @@ class AudioService {
 
     // Setup Reverb (Impulse Response)
     this.reverbNode = this.ctx.createConvolver();
-    this.reverbNode.buffer = this.createImpulseResponse(2, 2, false);
+    this.reverbNode.buffer = this.createImpulseResponse(2.2, 2.5, false);
     this.reverbNode.connect(this.masterGain);
   }
 
@@ -79,7 +86,6 @@ class AudioService {
   public setProgression(id: string) {
     if (PROGRESSIONS[id]) {
       this.currentProgressionId = id;
-      this.currentChordIndex = 0;
     }
   }
 
@@ -91,23 +97,29 @@ class AudioService {
     this.isDelayOn = active;
   }
 
-  public playNote(stepIndex: number): number {
+  public playNote(stepIndex: number): PlayedNoteInfo {
     if (!this.ctx || !this.masterGain) this.initialize();
-    if (this.ctx?.state === 'suspended') this.ctx.resume();
+    if (this.ctx?.state === 'suspended') {
+      this.ctx.resume();
+    }
 
-    const progression = PROGRESSIONS[this.currentProgressionId];
-    const chords = progression.frequencies;
+    const progression = PROGRESSIONS[this.currentProgressionId] || PROGRESSIONS['pop-anthem'];
+    const chords = progression.chords;
     
-    // Cycle through chords every 4 steps (beats)
-    const chordIndex = Math.floor(stepIndex / 4) % chords.length;
+    // Determine chord and note
+    const notesPerChord = chords[0].notes.length;
+    const chordIndex = Math.floor(stepIndex / notesPerChord) % chords.length;
     const currentChord = chords[chordIndex];
-    
-    // Arpeggiate through notes in the chord
-    const noteIndex = stepIndex % currentChord.length;
-    const frequency = currentChord[noteIndex];
+    const noteIndex = stepIndex % currentChord.notes.length;
+    const melodicNote = currentChord.notes[noteIndex];
 
-    this.playFrequency(frequency);
-    return frequency;
+    this.playFrequency(melodicNote.freq);
+
+    return {
+      freq: melodicNote.freq,
+      note: melodicNote.note,
+      chordName: currentChord.chordName,
+    };
   }
 
   private playFrequency(freq: number) {
@@ -116,22 +128,19 @@ class AudioService {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
+    // Rich synth tone combining triangle and sub overtone
     osc.type = 'triangle';
-    osc.frequency.value = freq;
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
 
-    // Envelope
+    // Punchy arcade synth envelope
     const now = this.ctx.currentTime;
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(1, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    gain.gain.linearRampToValueAtTime(0.8, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
 
-    // Routing
     osc.connect(gain);
-    
-    // Direct Signal
     gain.connect(this.masterGain);
 
-    // Effects Routing
     if (this.isDelayOn && this.delayNode) {
       gain.connect(this.delayNode);
     }
@@ -140,7 +149,7 @@ class AudioService {
     }
 
     osc.start(now);
-    osc.stop(now + 0.5);
+    osc.stop(now + 0.45);
   }
 }
 
