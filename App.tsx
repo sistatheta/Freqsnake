@@ -279,15 +279,25 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white font-sans flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-[#070a12] text-white font-sans flex flex-col items-center justify-start py-4 px-3 sm:px-4">
       
       {/* Outer Wrapper with Unified Width */}
-      <div className="w-full max-w-[640px] flex flex-col gap-5">
+      <div className="w-full max-w-[640px] flex flex-col gap-4 sm:gap-5">
         
-        {/* Top Main Section */}
-        <div className="w-full flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+        {/* Top Banner Marquee */}
+        <div className="w-full relative overflow-hidden rounded-2xl border-2 border-teal-700/50 shadow-[0_0_35px_rgba(13,148,136,0.35)] bg-[#070b14] group">
+          <img 
+            src="/assets/aistudio/freqsnake-banner_7806c86a.jpg" 
+            alt="Freq Snake Arcade Banner" 
+            className="w-full h-auto max-h-44 sm:max-h-56 object-contain bg-[#070b14] mx-auto select-none block"
+            draggable={false}
+          />
+        </div>
+
+        {/* Main Section */}
+        <div className="w-full flex flex-col md:flex-row items-center md:items-start justify-between gap-5 sm:gap-6">
           
-          {/* Left Column: Leaderboard & Controls */}
+          {/* Left Column: Leaderboard & Desktop Controls Guide */}
           <div className="w-full md:w-64 flex flex-col items-center md:items-start gap-4 order-2 md:order-1">
              <Leaderboard 
                 entries={leaderboard} 
@@ -296,15 +306,18 @@ const App: React.FC = () => {
                 onSave={saveHighScore}
              />
              
-             <div className="hidden md:flex flex-col gap-2.5 text-xs text-gray-500 font-mono bg-gray-900/50 p-3.5 rounded-lg border border-gray-800 w-full">
-                <h3 className="font-bold text-gray-400">CONTROLS</h3>
-                <div className="flex items-center gap-2">
-                    <span className="bg-gray-800 px-2 py-0.5 rounded text-[11px]">WASD / ARROWS</span>
-                    <span>Move</span>
+             <div className="hidden md:flex flex-col gap-2.5 text-xs text-teal-300/70 font-mono bg-[#0b101d]/90 p-3.5 rounded-xl border border-teal-900/50 w-full shadow-lg">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-yellow-400">DESKTOP KEYS</h3>
+                  <span className="text-[10px] text-teal-400/50">ARCADE</span>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="bg-gray-800 px-2 py-0.5 rounded text-[11px]">SPACE</span>
-                    <span>Pause</span>
+                <div className="flex items-center justify-between">
+                    <span className="bg-[#070b14] border border-teal-800/60 text-yellow-300 px-2 py-0.5 rounded text-[11px]">WASD / ARROWS</span>
+                    <span className="text-gray-300">Move Snake</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="bg-[#070b14] border border-teal-800/60 text-yellow-300 px-2 py-0.5 rounded text-[11px]">SPACEBAR</span>
+                    <span className="text-gray-300">Play / Pause</span>
                 </div>
             </div>
           </div>
@@ -315,48 +328,51 @@ const App: React.FC = () => {
             {/* Header Area */}
             <div className="w-full mb-3 space-y-2.5">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-cyan-500 italic" style={{ fontFamily: '"Press Start 2P", monospace' }}>
-                        FREQ SNAKE
-                    </h1>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                      <span className="text-xs font-mono font-bold tracking-wider text-teal-300" style={{ fontFamily: '"Press Start 2P", monospace' }}>
+                        FREQ LIVE
+                      </span>
+                    </div>
                     
                     <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-full transition-colors ${reverbActive ? 'bg-purple-500 shadow-[0_0_10px_purple]' : 'bg-gray-800'}`} title="Reverb">
+                        <div className={`p-1.5 rounded-full transition-all ${reverbActive ? 'bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.9)]' : 'bg-gray-800/80 border border-teal-900/40'}`} title="Reverb Effect">
                             <Triangle size={12} className="fill-current text-white" />
                         </div>
-                        <div className={`p-1.5 rounded-full transition-colors ${delayActive ? 'bg-cyan-500 shadow-[0_0_10px_cyan]' : 'bg-gray-800'}`} title="Delay">
+                        <div className={`p-1.5 rounded-full transition-all ${delayActive ? 'bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)]' : 'bg-gray-800/80 border border-teal-900/40'}`} title="Delay Effect">
                             <Circle size={12} className="fill-current text-white" />
                         </div>
                     </div>
                 </div>
 
-                {/* Horizontal Freq Bar (Top) */}
-                <div className="relative h-6 bg-gray-900 rounded overflow-hidden border border-gray-700 flex items-center px-2 shadow-inner">
-                    <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                        {[...Array(20)].map((_, i) => (
-                            <div key={i} className="w-full mx-[1px] h-full bg-gray-700" style={{ height: `${Math.random() * 100}%` }}></div>
+                {/* Horizontal Freq Bar */}
+                <div className="relative h-6 bg-[#060a12] rounded-lg overflow-hidden border border-teal-800/60 flex items-center px-2 shadow-inner">
+                    <div className="absolute inset-0 flex items-center justify-center opacity-15">
+                        {[...Array(24)].map((_, i) => (
+                            <div key={i} className="w-full mx-[1px] h-full bg-teal-500" style={{ height: `${Math.random() * 100}%` }}></div>
                         ))}
                     </div>
                     <div 
-                        className="h-full bg-gradient-to-r from-green-400 to-blue-500 transition-all duration-200 ease-out absolute left-0 top-0 opacity-80"
+                        className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-yellow-400 transition-all duration-200 ease-out absolute left-0 top-0 opacity-85 shadow-[0_0_10px_rgba(250,204,21,0.5)]"
                         style={{ width: `${Math.min(100, (currentFreq / 800) * 100)}%` }}
                     ></div>
-                    <span className="relative z-10 text-[11px] font-mono text-white drop-shadow-md w-full text-right">
-                    {currentFreq > 0 ? `${currentFreq.toFixed(1)} Hz` : 'WAITING FOR SIGNAL...'}
+                    <span className="relative z-10 text-[11px] font-mono text-yellow-300 font-bold drop-shadow-md w-full text-right">
+                    {currentFreq > 0 ? `${currentFreq.toFixed(1)} Hz` : 'SYNTH READY...'}
                     </span>
                 </div>
                 
-                {/* Stats Row */}
+                {/* Stats & Progression Row */}
                 <div className="flex justify-between items-center text-xs font-mono">
                     <div className="flex gap-4">
-                        <p className="text-gray-400">SCORE: <span className="text-white font-bold">{score}</span></p>
+                        <p className="text-teal-400/80">SCORE: <span className="text-yellow-400 font-bold text-sm">{score}</span></p>
                     </div>
                     
                     <div className="flex items-center gap-1.5">
-                        <Music size={12} className="text-pink-400" />
+                        <Music size={12} className="text-yellow-400" />
                         <select 
                             value={selectedProgression}
                             onChange={handleProgressionChange}
-                            className="bg-gray-900 text-white border border-gray-700 rounded px-1.5 py-0.5 text-[11px] outline-none focus:border-pink-500 cursor-pointer"
+                            className="bg-[#090f1c] text-yellow-300 border border-teal-700/60 rounded px-2 py-0.5 text-[11px] outline-none focus:border-yellow-400 cursor-pointer shadow-sm"
                         >
                             {Object.entries(PROGRESSIONS).map(([key, data]) => (
                             <option key={key} value={key}>{data.name}</option>
@@ -366,23 +382,27 @@ const App: React.FC = () => {
                 </div>
             </div>
 
-            {/* Game Board Container */}
+            {/* Game Board Container with Swipe support */}
             <div className="relative w-full flex justify-center">
-                <GameBoard snake={snake} items={items} />
+                <GameBoard 
+                  snake={snake} 
+                  items={items} 
+                  onDirectionChange={changeDirection}
+                />
                 
                 {(isPaused || isGameOver) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm rounded-lg z-30 p-5 text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm rounded-xl z-30 p-5 text-center border-2 border-teal-500/30">
                     {isGameOver ? (
                     <>
-                        <h2 className="text-xl text-red-500 font-bold mb-2 font-mono">TRACK ENDED</h2>
+                        <h2 className="text-xl text-orange-500 font-bold mb-2 font-mono tracking-wider drop-shadow-[0_0_10px_rgba(249,115,22,0.6)]">TRACK ENDED</h2>
                         <div className="mb-4 min-h-[45px] max-w-[90%]">
                             {isLoadingAi ? (
-                                <div className="flex items-center justify-center gap-2 text-gray-400">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span className="text-xs">Reviewing mix...</span>
+                                <div className="flex items-center justify-center gap-2 text-yellow-300/80">
+                                    <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
+                                    <span className="text-xs font-mono">Analyzing groove...</span>
                                 </div>
                             ) : (
-                                <p className="text-xs italic text-gray-300 border-l-2 border-pink-500 pl-2.5">
+                                <p className="text-xs italic text-yellow-100/90 border-l-2 border-yellow-400 pl-2.5 font-mono">
                                     "{aiComment}"
                                 </p>
                             )}
@@ -392,10 +412,10 @@ const App: React.FC = () => {
                                 e.currentTarget.blur();
                                 resetGame();
                             }}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full font-bold text-xs transition-transform hover:scale-105 shadow-lg shadow-green-500/40"
+                            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-full text-xs transition-transform hover:scale-105 shadow-lg shadow-emerald-500/40 cursor-pointer"
                         >
                             <RotateCcw className="w-3.5 h-3.5" />
-                            REMIX
+                            REMIX & PLAY
                         </button>
                     </>
                     ) : (
@@ -405,7 +425,7 @@ const App: React.FC = () => {
                             setIsPaused(false);
                             audioService.initialize();
                         }}
-                        className="flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-full font-bold text-base transition-all hover:scale-105 shadow-lg shadow-pink-600/40 group"
+                        className="flex items-center gap-2 px-7 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black rounded-full text-sm sm:text-base transition-all hover:scale-105 shadow-xl shadow-yellow-500/40 group cursor-pointer"
                     >
                         <Play className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
                         DROP BEAT
@@ -415,20 +435,21 @@ const App: React.FC = () => {
                 )}
             </div>
 
+            {/* Mobile Touch D-Pad */}
             <Controls onDirectionChange={changeDirection} />
             
-            {/* Mobile Legend */}
-            <div className="mt-3 flex gap-4 text-[11px] text-gray-500 font-mono md:hidden">
-                 <div className="flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 bg-pink-500 rounded-sm"></div>
+            {/* Mobile & Desktop Audio Element Legend */}
+            <div className="mt-3 flex gap-4 text-[11px] text-teal-300/80 font-mono">
+                 <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 bg-yellow-400 rounded-sm shadow-[0_0_6px_#facc15]"></div>
                     <span>Beat</span>
                 </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[8px] border-b-purple-500"></div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[8px] border-b-orange-500"></div>
                     <span>Reverb</span>
                 </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full"></div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-[0_0_6px_#22d3ee]"></div>
                     <span>Delay</span>
                 </div>
             </div>
@@ -437,7 +458,7 @@ const App: React.FC = () => {
 
         </div>
 
-        {/* Bottom Section: Audio Visualizer aligned with Left & Right edges of top components */}
+        {/* Bottom Section: Audio Visualizer */}
         <div className="w-full">
            <Visualizer />
         </div>

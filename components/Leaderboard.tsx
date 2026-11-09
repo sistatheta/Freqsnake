@@ -28,15 +28,18 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ entries, currentScore, isGame
   };
 
   return (
-    <div className="bg-gray-900/80 p-4 rounded-lg border border-gray-700 backdrop-blur-md w-full md:w-64 h-fit flex flex-col gap-4 shadow-xl">
-      <div className="flex items-center gap-2 border-b border-gray-700 pb-2">
-        <Trophy className="text-yellow-400 w-5 h-5" />
-        <h2 className="text-yellow-400 font-bold font-mono text-sm">LEGENDS</h2>
+    <div className="bg-[#0b101d]/90 p-4 rounded-xl border border-teal-800/40 backdrop-blur-md w-full md:w-64 h-fit flex flex-col gap-3 shadow-xl">
+      <div className="flex items-center justify-between border-b border-teal-900/60 pb-2.5">
+        <div className="flex items-center gap-2">
+          <Trophy className="text-yellow-400 w-4 h-4 drop-shadow-[0_0_8px_rgba(250,204,21,0.7)]" />
+          <h2 className="text-yellow-400 font-bold font-mono text-xs tracking-wider">LEGENDS</h2>
+        </div>
+        <span className="text-[10px] text-teal-400/60 font-mono">TOP 10</span>
       </div>
 
       {isQualifying && (
-        <div className="animate-pulse bg-pink-900/30 p-3 rounded border border-pink-500/50 mb-2">
-          <p className="text-xs text-pink-300 mb-2 font-bold text-center">NEW HIGH SCORE!</p>
+        <div className="animate-pulse bg-amber-950/40 p-3 rounded-lg border border-amber-500/60 mb-1 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+          <p className="text-xs text-yellow-300 mb-2 font-bold text-center">NEW HIGH SCORE!</p>
           <form onSubmit={handleSubmit} className="flex gap-2">
             <input
               type="text"
@@ -44,39 +47,39 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ entries, currentScore, isGame
               value={name}
               onChange={(e) => setName(e.target.value.toUpperCase())}
               placeholder="NAME"
-              className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm font-mono text-white uppercase focus:border-pink-500 outline-none"
+              className="w-full bg-[#080d18] border border-teal-700/60 rounded px-2 py-1 text-xs font-mono text-yellow-300 uppercase focus:border-yellow-400 outline-none"
               autoFocus
             />
             <button 
               type="submit" 
               disabled={!name}
-              className="bg-pink-600 hover:bg-pink-500 disabled:opacity-50 text-white p-1 rounded transition-colors"
+              className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold p-1.5 rounded transition-all shadow-md shadow-amber-500/30"
             >
-              <Save size={16} />
+              <Save size={14} />
             </button>
           </form>
-          <p className="text-[10px] text-gray-400 mt-1 text-center">Max 5 letters</p>
+          <p className="text-[10px] text-teal-300/60 mt-1 text-center">Max 5 letters</p>
         </div>
       )}
 
-      <div className="space-y-2 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+      <div className="space-y-1.5 overflow-y-auto max-h-[220px] md:max-h-[280px] pr-1 custom-scrollbar">
         {entries.length === 0 ? (
-          <p className="text-gray-500 text-xs text-center py-4">No records yet.</p>
+          <p className="text-teal-400/40 text-xs text-center py-4 font-mono">No records yet.</p>
         ) : (
           entries.map((entry, idx) => (
             <div 
               key={`${entry.name}-${entry.timestamp}`} 
-              className={`flex justify-between items-center text-xs font-mono p-2 rounded ${
+              className={`flex justify-between items-center text-xs font-mono p-2 rounded-lg transition-all ${
                 hasSaved && entry.score === currentScore && entry.timestamp > Date.now() - 1000 
-                  ? 'bg-green-900/50 border border-green-500/30' 
-                  : 'bg-gray-800/40 odd:bg-gray-800/20'
+                  ? 'bg-emerald-900/50 border border-emerald-400/50 shadow-[0_0_10px_rgba(52,211,153,0.3)]' 
+                  : 'bg-[#0f172a]/40 odd:bg-[#0f172a]/20 border border-teal-900/20'
               }`}
             >
-              <div className="flex gap-2">
-                <span className="text-gray-500 w-4">{idx + 1}.</span>
-                <span className="text-cyan-300 font-bold">{entry.name}</span>
+              <div className="flex items-center gap-2">
+                <span className={`w-4 text-[10px] ${idx === 0 ? 'text-yellow-400 font-bold' : idx === 1 ? 'text-teal-300' : idx === 2 ? 'text-amber-500' : 'text-slate-500'}`}>{idx + 1}.</span>
+                <span className="text-emerald-300 font-bold tracking-wider">{entry.name}</span>
               </div>
-              <span className="text-white">{entry.score}</span>
+              <span className="text-yellow-300 font-bold">{entry.score}</span>
             </div>
           ))
         )}

@@ -1,30 +1,23 @@
-import { GoogleGenAI } from "@google/genai";
-
-const API_KEY = process.env.API_KEY;
-
 export const getGameOverCommentary = async (score: number): Promise<string> => {
-  if (!API_KEY) {
-    return "Great rhythm! Add an API Key to hear the AI music critic.";
-  }
-
   try {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `I just finished playing 'Freq Snake', a musical snake game. I scored ${score} points. 
-      The grid size is small. A score of 0-5 is 'tone deaf'. 10-20 is 'catching the beat'. 30+ is 'virtuoso'.
-      Give me a very short, witty, music-themed sarcastic or encouraging one-sentence remark about my performance. 
-      Address me as 'DJ' or 'Maestro'.`,
-      config: {
-        maxOutputTokens: 50,
-        temperature: 1.2, // High creativity
-      }
+    const res = await fetch('/api/commentary', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ score }),
     });
 
-    return response.text || "Music Stopped!";
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      if (errData?.fallback) return errData.fallback;
+      return "Track ended! Keep spinning the vinyl, DJ.";
+    }
+
+    const data = await res.json();
+    return data.commentary || "Great rhythm, Maestro!";
   } catch (error) {
-    console.error("AI Error:", error);
-    return "Music Stopped! (AI critic is offline)";
+    console.error("Commentary request error:", error);
+    return "Track ended! Practice makes virtuoso.";
   }
 };

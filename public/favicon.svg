@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background square with rounded corners -->
+  <rect width="64" height="64" rx="14" fill="#111827" />
+  <rect x="2" y="2" width="60" height="60" rx="12" stroke="#22c55e" stroke-width="2" stroke-opacity="0.3" />
+  
+  <!-- Pixel / Neon Snake Segments -->
+  <rect x="12" y="36" width="10" height="10" rx="2" fill="#15803d" />
+  <rect x="22" y="36" width="10" height="10" rx="2" fill="#16a34a" />
+  <rect x="22" y="26" width="10" height="10" rx="2" fill="#22c55e" />
+  <rect x="32" y="26" width="10" height="10" rx="2" fill="#4ade80" />
+  <!-- Snake Head -->
+  <rect x="42" y="26" width="12" height="12" rx="3" fill="#86efac" />
+  <!-- Eye -->
+  <rect x="48" y="28" width="3" height="3" fill="#0f172a" />
+
+  <!-- Music Audio Wave Bars underneath -->
+  <rect x="14" y="16" width="4" height="8" rx="1" fill="#06b6d4" />
+  <rect x="22" y="12" width="4" height="12" rx="1" fill="#38bdf8" />
+  <rect x="30" y="8" width="4" height="16" rx="1" fill="#a855f7" />
+  <rect x="38" y="13" width="4" height="11" rx="1" fill="#ec4899" />
+  <rect x="46" y="17" width="4" height="7" rx="1" fill="#f59e0b" />
+</svg>

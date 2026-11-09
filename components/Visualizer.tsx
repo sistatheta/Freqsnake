@@ -30,7 +30,7 @@ const Visualizer: React.FC = () => {
           const height = canvas.height;
 
           // Clear background with translucent fade effect
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+          ctx.fillStyle = 'rgba(10, 14, 23, 0.45)';
           ctx.fillRect(0, 0, width, height);
 
           // 1. Draw FFT Frequency Spectrum Bars
@@ -50,11 +50,11 @@ const Visualizer: React.FC = () => {
             const x = i * barWidth;
             const y = height - barHeight;
 
-            // Gradient for spectrum bars
+            // Gradient for spectrum bars matching banner (Amber/Orange to Neon Gold to Mint Teal)
             const gradient = ctx.createLinearGradient(0, height, 0, 0);
-            gradient.addColorStop(0, '#ec4899'); // Pink
-            gradient.addColorStop(0.5, '#a855f7'); // Purple
-            gradient.addColorStop(1, '#22d3ee'); // Cyan
+            gradient.addColorStop(0, '#ea580c'); // Warm Brick Orange
+            gradient.addColorStop(0.45, '#facc15'); // Electric Gold
+            gradient.addColorStop(1, '#34d399'); // Mint Emerald
 
             ctx.fillStyle = gradient;
             ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
@@ -66,9 +66,9 @@ const Visualizer: React.FC = () => {
           analyser.getByteTimeDomainData(timeData);
 
           ctx.lineWidth = 2;
-          ctx.strokeStyle = '#22d3ee';
+          ctx.strokeStyle = '#2dd4bf';
           ctx.shadowBlur = 8;
-          ctx.shadowColor = '#22d3ee';
+          ctx.shadowColor = '#10b981';
           ctx.beginPath();
 
           const sliceWidth = width / timeBufferLength;
@@ -104,20 +104,20 @@ const Visualizer: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full bg-gray-900/90 border border-gray-800 rounded-lg p-3 backdrop-blur-md shadow-lg flex flex-col gap-2">
-      {/* Header Label - Cleanly displayed & un-truncated */}
-      <div className="flex items-center justify-between text-xs font-mono border-b border-gray-800/80 pb-2">
-        <div className="flex items-center gap-2 text-cyan-400 font-bold tracking-wider">
-          <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
+    <div className="w-full bg-[#0b101d]/90 border border-teal-800/40 rounded-xl p-3 backdrop-blur-md shadow-lg flex flex-col gap-2">
+      {/* Header Label */}
+      <div className="flex items-center justify-between text-xs font-mono border-b border-teal-900/60 pb-2">
+        <div className="flex items-center gap-2 text-yellow-400 font-bold tracking-wider">
+          <Activity className="w-4 h-4 text-yellow-400 animate-pulse drop-shadow-[0_0_6px_rgba(250,204,21,0.7)]" />
           <span>AUDIO VISUALIZER</span>
         </div>
-        <span className="text-[10px] text-gray-400 font-mono tracking-widest hidden sm:inline">
+        <span className="text-[10px] text-teal-300/60 font-mono tracking-widest hidden sm:inline">
           SPECTRUM & WAVEFORM
         </span>
       </div>
 
       {/* Canvas Container */}
-      <div ref={containerRef} className="w-full h-20 relative overflow-hidden rounded bg-gray-950/80 border border-gray-800">
+      <div ref={containerRef} className="w-full h-20 relative overflow-hidden rounded-lg bg-[#070b13] border border-teal-900/50">
         <canvas ref={canvasRef} className="w-full h-full block" />
       </div>
     </div>
