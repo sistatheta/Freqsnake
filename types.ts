@@ -10,7 +10,7 @@ export enum Direction {
   RIGHT = 'RIGHT',
 }
 
-export type ItemType = 'FOOD' | 'REVERB' | 'DELAY';
+export type ItemType = 'FOOD' | 'REVERB' | 'DELAY' | 'STAR';
 
 export interface GameItem {
   pos: Point;

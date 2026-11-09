@@ -54,6 +54,7 @@ const App: React.FC = () => {
   const [delayActive, setDelayActive] = useState(false);
   const [selectedProgression, setSelectedProgression] = useState('pop-anthem');
   const [isBeatEnabled, setIsBeatEnabled] = useState(true);
+  const [padTimeLeft, setPadTimeLeft] = useState<number>(0);
 
   // AI Commentary State
   const [aiComment, setAiComment] = useState<string | null>(null);
@@ -92,6 +93,30 @@ const App: React.FC = () => {
     }
   }, [isPaused, isGameOver, isBeatEnabled]);
 
+  // Ambient Pad countdown timer
+  useEffect(() => {
+    if (padTimeLeft <= 0 || isPaused || isGameOver) return;
+    const timer = setInterval(() => {
+      setPadTimeLeft(prev => {
+        if (prev <= 1) {
+          audioService.stopSynthPad();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [padTimeLeft, isPaused, isGameOver]);
+
+  // Sync Ambient Pad with game pause/resume
+  useEffect(() => {
+    if (isPaused || isGameOver) {
+      audioService.stopSynthPad();
+    } else if (padTimeLeft > 0) {
+      audioService.activateSynthPad(padTimeLeft);
+    }
+  }, [isPaused, isGameOver]);
+
   // Warm up audio service & subscribe to live worldwide leaderboard
   useEffect(() => {
     audioService.initialize();
@@ -107,6 +132,7 @@ const App: React.FC = () => {
     return () => {
       unsubscribe();
       audioService.stopBeat();
+      audioService.stopSynthPad();
     };
   }, []);
 
@@ -150,8 +176,11 @@ const App: React.FC = () => {
     
     setReverbActive(false);
     setDelayActive(false);
+    setPadTimeLeft(0);
     audioService.toggleReverb(false);
     audioService.toggleDelay(false);
+    audioService.stopSynthPad();
+    audioService.setGameScore(0);
   };
 
   const saveHighScore = async (name: string) => {
@@ -305,9 +334,13 @@ const App: React.FC = () => {
           const noteResult = audioService.playNote(currentScore);
           setCurrentNoteInfo(noteResult);
 
+          // Idea C: Trigger chomp percussion hit on beat
+          audioService.playFoodChompAccent();
+
           const nextScore = currentScore + 1;
           scoreRef.current = nextScore;
           setScore(nextScore);
+          audioService.setGameScore(nextScore);
 
           const nextSpeed = Math.max(MIN_SPEED, speedRef.current - SPEED_INCREMENT);
           speedRef.current = nextSpeed;
@@ -321,8 +354,17 @@ const App: React.FC = () => {
             id: Date.now() + '-food'
           });
 
-          // Random powerup spawn every 5 points
-          if (nextScore % 5 === 0) {
+          // Spawn Radiant Star powerup every 7 points (Soft Ambient Pad)
+          if (nextScore % 7 === 0) {
+            nextItems.push({
+              pos: generatePosition(newSnake, nextItems),
+              type: 'STAR',
+              id: Date.now() + '-star'
+            });
+          }
+
+          // Random FX powerup spawn every 5 points
+          if (nextScore % 5 === 0 && nextScore % 7 !== 0) {
             const type: ItemType = Math.random() > 0.5 ? 'REVERB' : 'DELAY';
             nextItems.push({
               pos: generatePosition(newSnake, nextItems),
@@ -334,6 +376,18 @@ const App: React.FC = () => {
           itemsRef.current = nextItems;
           setItems(nextItems);
         } 
+        else if (item.type === 'STAR') {
+           // Collect Radiant Star: Activates lush ambient chord pad for 20s + bonus points
+           audioService.activateSynthPad(20);
+           setPadTimeLeft(20);
+           const nextScore = scoreRef.current + 3;
+           scoreRef.current = nextScore;
+           setScore(nextScore);
+           audioService.setGameScore(nextScore);
+           itemsRef.current = currentItems.filter((_, i) => i !== itemIndex);
+           setItems(itemsRef.current);
+           // Bonus star doesn't pop body segment, rewarding player with extra growth
+        }
         else if (item.type === 'REVERB') {
            const newState = !reverbRef.current;
            reverbRef.current = newState;
@@ -369,6 +423,8 @@ const App: React.FC = () => {
     isPausedRef.current = true;
     setIsGameOver(true);
     setIsPaused(true);
+    setPadTimeLeft(0);
+    audioService.stopSynthPad();
     
     if (scoreRef.current > 5) {
       setIsLoadingAi(true);
@@ -449,7 +505,20 @@ const App: React.FC = () => {
                       </span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                        {/* Ambient Synth Pad Indicator */}
+                        <div 
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full transition-all border ${
+                            padTimeLeft > 0 
+                              ? 'bg-fuchsia-950/90 text-fuchsia-300 border-fuchsia-400 shadow-[0_0_12px_rgba(217,70,239,0.85)] animate-pulse' 
+                              : 'bg-gray-800/80 border-teal-900/40 text-gray-500'
+                          }`} 
+                          title="Ambient Synth Chord Pad (Star Item)"
+                        >
+                            <Sparkles size={10} className={padTimeLeft > 0 ? "fill-current text-fuchsia-300" : "text-gray-500"} />
+                            <span className="text-[9px] font-mono font-bold">{padTimeLeft > 0 ? `${padTimeLeft}s` : 'PAD'}</span>
+                        </div>
+
                         <div className={`p-1.5 rounded-full transition-all ${reverbActive ? 'bg-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.9)]' : 'bg-gray-800/80 border border-teal-900/40'}`} title="Reverb Effect">
                             <Triangle size={11} className="fill-current text-white" />
                         </div>
@@ -619,7 +688,7 @@ const App: React.FC = () => {
             <Controls onDirectionChange={changeDirection} />
             
             {/* Mobile & Desktop Audio Element Legend */}
-            <div className="mt-2.5 flex gap-4 text-[10px] text-teal-300/80 font-mono">
+            <div className="mt-2.5 flex flex-wrap justify-center gap-3 sm:gap-4 text-[10px] text-teal-300/80 font-mono">
                  <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 bg-yellow-400 rounded-sm shadow-[0_0_6px_#facc15]"></div>
                     <span>Beat</span>
@@ -631,6 +700,10 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-[0_0_6px_#22d3ee]"></div>
                     <span>Delay</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 bg-fuchsia-400 shadow-[0_0_8px_#e879f9]" style={{ clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }}></div>
+                    <span>★ Pad</span>
                 </div>
             </div>
 

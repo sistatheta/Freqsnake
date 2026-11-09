@@ -99,6 +99,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ snake, items, onDirectionChange }
             cellContent = (
               <div className="w-[88%] h-[88%] bg-gradient-to-br from-cyan-300 to-teal-500 shadow-[0_0_15px_rgba(34,211,238,0.9)] rounded-full animate-pulse border border-cyan-200/50"></div>
             );
+          } else if (item.type === 'STAR') {
+            // Radiant Cosmic Synth Star (Soft Ambient Pad Powerup)
+            cellContent = (
+              <div className="w-full h-full flex items-center justify-center animate-spin" style={{ animationDuration: '4.5s' }}>
+                <div 
+                  className="w-[94%] h-[94%] bg-gradient-to-tr from-fuchsia-500 via-pink-400 to-yellow-200 shadow-[0_0_18px_rgba(244,114,182,1)]"
+                  style={{
+                    clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)'
+                  }}
+                ></div>
+              </div>
+            );
           }
         }
 

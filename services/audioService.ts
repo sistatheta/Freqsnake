@@ -21,15 +21,25 @@ class AudioService {
   
   // Progression State
   private currentProgressionId: string = 'pop-anthem';
+  private currentChordIndex: number = 0;
 
-  // Drum Machine / Beat State
+  // Drum Machine / Beat State (Ideas A, B, C)
   private isBeatRunning: boolean = false;
   private beatTimer: number | null = null;
   private nextNoteTime: number = 0;
   private current16thStep: number = 0;
-  private bpm: number = 124;
+  private bpm: number = 122;
+  private currentScore: number = 0;
   private lookaheadMs: number = 25;
   private scheduleAheadTime: number = 0.12;
+
+  // Ambient Synth Pad State (Star Powerup)
+  private isPadActive: boolean = false;
+  private padGainNode: GainNode | null = null;
+  private padFilterNode: BiquadFilterNode | null = null;
+  private padOscillators: OscillatorNode[] = [];
+  private padExpiryTimer: number | null = null;
+  private padExpiresAt: number = 0;
 
   public initialize() {
     if (this.ctx) return;
@@ -38,7 +48,7 @@ class AudioService {
     this.ctx = new AudioCtx();
     
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.4;
+    this.masterGain.gain.value = 0.42;
     
     // Setup Analyser for Visualizers
     this.analyser = this.ctx.createAnalyser();
@@ -69,8 +79,6 @@ class AudioService {
     // Delay Loop: Source -> Delay -> Feedback -> Delay
     this.delayNode.connect(this.delayFeedback);
     this.delayFeedback.connect(this.delayNode);
-    
-    // Output Delay to Master
     this.delayNode.connect(this.masterGain);
 
     // Setup Reverb (Impulse Response)
@@ -108,6 +116,10 @@ class AudioService {
   public setProgression(id: string) {
     if (PROGRESSIONS[id]) {
       this.currentProgressionId = id;
+      this.currentChordIndex = 0;
+      if (this.isPadActive) {
+        this.updatePadChord(0);
+      }
     }
   }
 
@@ -120,8 +132,14 @@ class AudioService {
   }
 
   /* ----------------------------------------------------
-     DRUM MACHINE / FOUR-ON-THE-FLOOR SYNTHESIZER
+     DYNAMIC DRUM MACHINE (IDEAS A, B, C COMBINED)
   ---------------------------------------------------- */
+  public setGameScore(score: number) {
+    this.currentScore = score;
+    // Subtly scale tempo with game progression (122 to 134 BPM)
+    this.bpm = Math.min(134, 122 + Math.floor(score * 0.35));
+  }
+
   public startBeat() {
     this.initialize();
     if (!this.ctx) return;
@@ -151,10 +169,6 @@ class AudioService {
     return this.isBeatRunning;
   }
 
-  public setBpm(newBpm: number) {
-    this.bpm = Math.max(90, Math.min(160, newBpm));
-  }
-
   public getBpm(): number {
     return this.bpm;
   }
@@ -175,18 +189,28 @@ class AudioService {
   }
 
   private scheduleDrumStep(step: number, time: number) {
-    // Four-on-the-floor kick on steps 0, 4, 8, 12
+    // 1. Kick Drum (Idea A): Four-on-the-floor on steps 0, 4, 8, 12
     if (step % 4 === 0) {
       const isDownbeat = step === 0;
       this.playKick(time, isDownbeat);
     }
-    // Off-beat closed hi-hat on steps 2, 6, 10
-    if (step === 2 || step === 6 || step === 10) {
-      this.playHiHat(time, false);
+
+    // 2. Closed Hi-Hats (Idea B: unlocks at score >= 4)
+    if (this.currentScore >= 4) {
+      if (step === 2 || step === 6 || step === 10) {
+        this.playHiHat(time, false);
+      }
+      // Accent open hi-hat on step 14
+      if (step === 14) {
+        this.playHiHat(time, true);
+      }
     }
-    // Accent open hi-hat on step 14 for syncopated groove
-    if (step === 14) {
-      this.playHiHat(time, true);
+
+    // 3. 808 Snare / Clap (Idea B: unlocks at score >= 9 on beats 2 & 4)
+    if (this.currentScore >= 9) {
+      if (step === 4 || step === 12) {
+        this.playSnare(time);
+      }
     }
   }
 
@@ -197,12 +221,11 @@ class AudioService {
     const gain = this.ctx.createGain();
 
     osc.type = 'sine';
-    // Frequency sweeps down rapidly: creates punchy electronic kick
     const startFreq = isAccent ? 165 : 145;
     osc.frequency.setValueAtTime(startFreq, time);
     osc.frequency.exponentialRampToValueAtTime(36, time + 0.08);
 
-    const kickVolume = isAccent ? 0.75 : 0.65;
+    const kickVolume = isAccent ? 0.72 : 0.62;
     gain.gain.setValueAtTime(kickVolume, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.24);
 
@@ -221,7 +244,6 @@ class AudioService {
     const source = this.ctx.createBufferSource();
     source.buffer = this.noiseBuffer;
 
-    // Highpass filter for crisp metallic hi-hat sizzle
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(7200, time);
@@ -245,6 +267,252 @@ class AudioService {
     source.stop(time + duration + 0.02);
   }
 
+  private playSnare(time: number) {
+    if (!this.ctx || !this.masterGain) return;
+    this.initNoiseBuffer();
+    if (!this.noiseBuffer) return;
+
+    // Tonal body pop
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(185, time);
+    osc.frequency.exponentialRampToValueAtTime(65, time + 0.06);
+    oscGain.gain.setValueAtTime(0.4, time);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    osc.connect(oscGain);
+    oscGain.connect(this.masterGain);
+    osc.start(time);
+    osc.stop(time + 0.09);
+
+    // Filtered noise crack
+    const source = this.ctx.createBufferSource();
+    source.buffer = this.noiseBuffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2400, time);
+    filter.Q.setValueAtTime(1.4, time);
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.35, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+
+    source.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+
+    if (this.isReverbOn && this.reverbNode) {
+      noiseGain.connect(this.reverbNode);
+    }
+
+    source.start(time);
+    source.stop(time + 0.14);
+  }
+
+  // Idea C: Interactive chomp percussion click when food is eaten
+  public playFoodChompAccent() {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(750, now);
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.035);
+
+    gain.gain.setValueAtTime(0.28, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(now);
+    osc.stop(now + 0.045);
+  }
+
+  /* ----------------------------------------------------
+     SPECIAL STAR ITEM: AMBIENT SYNTH CHORD PAD
+  ---------------------------------------------------- */
+  public activateSynthPad(durationSeconds: number = 20) {
+    this.initialize();
+    if (!this.ctx || !this.masterGain) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+
+    // Play sparkling star collection chime
+    this.playStarCollectionChime();
+
+    this.padExpiresAt = Date.now() + durationSeconds * 1000;
+
+    if (this.isPadActive && this.padGainNode) {
+      // Already running: extend timer and refresh swell
+      const now = this.ctx.currentTime;
+      this.padGainNode.gain.cancelScheduledValues(now);
+      this.padGainNode.gain.linearRampToValueAtTime(0.18, now + 0.5);
+      this.schedulePadExpiry(durationSeconds);
+      return;
+    }
+
+    this.isPadActive = true;
+
+    // Create warm lowpass filter for smooth ambient pad
+    this.padFilterNode = this.ctx.createBiquadFilter();
+    this.padFilterNode.type = 'lowpass';
+    this.padFilterNode.frequency.setValueAtTime(650, this.ctx.currentTime);
+    this.padFilterNode.Q.setValueAtTime(1.2, this.ctx.currentTime);
+
+    // Dedicated pad gain node with smooth attack
+    this.padGainNode = this.ctx.createGain();
+    const now = this.ctx.currentTime;
+    this.padGainNode.gain.setValueAtTime(0, now);
+    this.padGainNode.gain.linearRampToValueAtTime(0.18, now + 0.8);
+
+    this.padFilterNode.connect(this.padGainNode);
+    this.padGainNode.connect(this.masterGain);
+
+    if (this.reverbNode) {
+      this.padGainNode.connect(this.reverbNode);
+    }
+
+    // Spin up 3 warm polyphonic chord voices
+    this.createPadVoices(this.currentChordIndex);
+    this.schedulePadExpiry(durationSeconds);
+  }
+
+  private schedulePadExpiry(durationSeconds: number) {
+    if (this.padExpiryTimer !== null) {
+      clearTimeout(this.padExpiryTimer);
+    }
+    this.padExpiryTimer = window.setTimeout(() => {
+      this.stopSynthPad();
+    }, durationSeconds * 1000);
+  }
+
+  public getPadRemainingSeconds(): number {
+    if (!this.isPadActive) return 0;
+    return Math.max(0, Math.ceil((this.padExpiresAt - Date.now()) / 1000));
+  }
+
+  public isSynthPadActive(): boolean {
+    return this.isPadActive;
+  }
+
+  private createPadVoices(chordIdx: number) {
+    if (!this.ctx || !this.padFilterNode) return;
+
+    this.clearPadOscillators();
+
+    const freqs = this.getChordFrequencies(chordIdx);
+    const now = this.ctx.currentTime;
+
+    freqs.forEach((freq, i) => {
+      const osc = this.ctx!.createOscillator();
+      // Triangle wave creates classic soft vintage synth pad
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now);
+
+      // Subtle analog detuning for lush stereo chorus effect
+      const detuneCents = (i === 0 ? 0 : i === 1 ? -6 : 6);
+      osc.detune.setValueAtTime(detuneCents, now);
+
+      osc.connect(this.padFilterNode!);
+      osc.start(now);
+      this.padOscillators.push(osc);
+    });
+  }
+
+  public updatePadChord(chordIdx: number) {
+    this.currentChordIndex = chordIdx;
+    if (!this.isPadActive || !this.ctx || this.padOscillators.length === 0) return;
+
+    const freqs = this.getChordFrequencies(chordIdx);
+    const now = this.ctx.currentTime;
+
+    // Smoothly glide pad frequencies to new chord (0.5s musical crossfade)
+    this.padOscillators.forEach((osc, i) => {
+      if (freqs[i]) {
+        osc.frequency.cancelScheduledValues(now);
+        osc.frequency.exponentialRampToValueAtTime(freqs[i], now + 0.55);
+      }
+    });
+  }
+
+  private getChordFrequencies(chordIdx: number): number[] {
+    const progression = PROGRESSIONS[this.currentProgressionId] || PROGRESSIONS['pop-anthem'];
+    const chord = progression.chords[chordIdx % progression.chords.length];
+    if (!chord || !chord.notes.length) return [261.63, 329.63, 392.00];
+
+    // Sub-octave root + 3rd + 5th for deep warm pad voicing
+    const rootFreq = chord.notes[0].freq;
+    const thirdFreq = chord.notes[1] ? chord.notes[1].freq : rootFreq * 1.25;
+    const fifthFreq = chord.notes[2] ? chord.notes[2].freq : rootFreq * 1.5;
+
+    return [rootFreq * 0.5, thirdFreq, fifthFreq];
+  }
+
+  public stopSynthPad() {
+    if (!this.isPadActive) return;
+    this.isPadActive = false;
+    this.padExpiresAt = 0;
+
+    if (this.padExpiryTimer !== null) {
+      clearTimeout(this.padExpiryTimer);
+      this.padExpiryTimer = null;
+    }
+
+    if (this.ctx && this.padGainNode) {
+      const now = this.ctx.currentTime;
+      this.padGainNode.gain.cancelScheduledValues(now);
+      this.padGainNode.gain.linearRampToValueAtTime(0, now + 0.8);
+      setTimeout(() => {
+        this.clearPadOscillators();
+        this.padGainNode = null;
+        this.padFilterNode = null;
+      }, 900);
+    } else {
+      this.clearPadOscillators();
+    }
+  }
+
+  private clearPadOscillators() {
+    this.padOscillators.forEach(osc => {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch (_) {}
+    });
+    this.padOscillators = [];
+  }
+
+  private playStarCollectionChime() {
+    if (!this.ctx || !this.masterGain) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 sparkle chime
+    const now = this.ctx.currentTime;
+
+    notes.forEach((freq, i) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.05);
+
+      gain.gain.setValueAtTime(0, now + i * 0.05);
+      gain.gain.linearRampToValueAtTime(0.4, now + i * 0.05 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain!);
+
+      if (this.delayNode) {
+        gain.connect(this.delayNode);
+      }
+
+      osc.start(now + i * 0.05);
+      osc.stop(now + i * 0.05 + 0.4);
+    });
+  }
+
   /* ----------------------------------------------------
      MELODIC FOOD NOTES SYNTHESIZER
   ---------------------------------------------------- */
@@ -264,6 +532,13 @@ class AudioService {
     const noteIndex = stepIndex % currentChord.notes.length;
     const melodicNote = currentChord.notes[noteIndex];
 
+    this.currentChordIndex = chordIndex;
+
+    // If ambient pad is playing, glide it to current chord
+    if (this.isPadActive) {
+      this.updatePadChord(chordIndex);
+    }
+
     this.playFrequency(melodicNote.freq);
 
     return {
@@ -279,7 +554,6 @@ class AudioService {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
-    // Rich synth tone combining triangle and punchy envelope
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
 
