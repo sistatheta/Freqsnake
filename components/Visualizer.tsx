@@ -6,13 +6,15 @@ const Visualizer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
+  const freqDataRef = useRef<Uint8Array | null>(null);
+  const timeDataRef = useRef<Uint8Array | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current && canvasRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        canvasRef.current.width = rect.width;
-        canvasRef.current.height = rect.height;
+        canvasRef.current.width = Math.floor(rect.width);
+        canvasRef.current.height = Math.floor(rect.height);
       }
     };
 
@@ -23,58 +25,65 @@ const Visualizer: React.FC = () => {
       const analyser = audioService.getAnalyser();
       const canvas = canvasRef.current;
 
-      if (canvas && analyser) {
+      if (canvas && analyser && canvas.width > 0 && canvas.height > 0) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           const width = canvas.width;
           const height = canvas.height;
 
           // Clear background with translucent fade effect
-          ctx.fillStyle = 'rgba(10, 14, 23, 0.45)';
+          ctx.fillStyle = 'rgba(10, 14, 23, 0.5)';
           ctx.fillRect(0, 0, width, height);
 
-          // 1. Draw FFT Frequency Spectrum Bars
+          // 1. Draw FFT Frequency Spectrum Bars (Zero-Allocation Buffers)
           const freqBufferLength = analyser.frequencyBinCount;
-          const freqData = new Uint8Array(freqBufferLength);
+          if (!freqDataRef.current || freqDataRef.current.length !== freqBufferLength) {
+            freqDataRef.current = new Uint8Array(freqBufferLength);
+          }
+          const freqData = freqDataRef.current;
           analyser.getByteFrequencyData(freqData);
 
-          const barCount = Math.min(64, Math.floor(width / 8));
+          const barCount = Math.min(48, Math.floor(width / 7));
           const barWidth = width / barCount;
+
+          // Precompute gradient once or use simple fast gradient
+          const gradient = ctx.createLinearGradient(0, height, 0, 0);
+          gradient.addColorStop(0, '#ea580c');
+          gradient.addColorStop(0.5, '#facc15');
+          gradient.addColorStop(1, '#34d399');
+
+          ctx.fillStyle = gradient;
 
           for (let i = 0; i < barCount; i++) {
             const index = Math.floor((i / barCount) * (freqBufferLength / 4));
             const value = freqData[index] || 0;
             const percent = value / 255;
-            const barHeight = percent * (height * 0.85);
+            const barHeight = percent * (height * 0.82);
 
             const x = i * barWidth;
             const y = height - barHeight;
 
-            // Gradient for spectrum bars matching banner (Amber/Orange to Neon Gold to Mint Teal)
-            const gradient = ctx.createLinearGradient(0, height, 0, 0);
-            gradient.addColorStop(0, '#ea580c'); // Warm Brick Orange
-            gradient.addColorStop(0.45, '#facc15'); // Electric Gold
-            gradient.addColorStop(1, '#34d399'); // Mint Emerald
-
-            ctx.fillStyle = gradient;
-            ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
+            ctx.fillRect(x + 1, y, barWidth - 1.5, barHeight);
           }
 
-          // 2. Draw Time Domain Waveform Overlay
+          // 2. Draw Time Domain Waveform Overlay (Zero-Allocation Buffers)
           const timeBufferLength = analyser.fftSize;
-          const timeData = new Uint8Array(timeBufferLength);
+          if (!timeDataRef.current || timeDataRef.current.length !== timeBufferLength) {
+            timeDataRef.current = new Uint8Array(timeBufferLength);
+          }
+          const timeData = timeDataRef.current;
           analyser.getByteTimeDomainData(timeData);
 
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 1.5;
           ctx.strokeStyle = '#2dd4bf';
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = '#10b981';
           ctx.beginPath();
 
-          const sliceWidth = width / timeBufferLength;
+          // Subsample points for high 60fps mobile performance
+          const step = Math.max(1, Math.floor(timeBufferLength / 128));
+          const sliceWidth = width / (timeBufferLength / step);
           let x = 0;
 
-          for (let i = 0; i < timeBufferLength; i++) {
+          for (let i = 0; i < timeBufferLength; i += step) {
             const v = timeData[i] / 128.0;
             const y = (v * height) / 2;
 
@@ -88,7 +97,6 @@ const Visualizer: React.FC = () => {
           }
 
           ctx.stroke();
-          ctx.shadowBlur = 0; // Reset shadow for next frame
         }
       }
 

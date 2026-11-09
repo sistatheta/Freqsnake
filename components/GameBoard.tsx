@@ -20,22 +20,28 @@ const GameBoard: React.FC<GameBoardProps> = ({ snake, items, onDirectionChange }
     }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStartRef.current || !onDirectionChange) return;
-    const touch = e.changedTouches[0];
+    const touch = e.touches[0];
     const diffX = touch.clientX - touchStartRef.current.x;
     const diffY = touch.clientY - touchStartRef.current.y;
-    const minSwipeDistance = 25;
+    const threshold = 18; // Rapid 18px threshold
 
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      if (Math.abs(diffX) > minSwipeDistance) {
+    if (Math.abs(diffX) > threshold || Math.abs(diffY) > threshold) {
+      if (Math.abs(diffX) > Math.abs(diffY)) {
         onDirectionChange(diffX > 0 ? Direction.RIGHT : Direction.LEFT);
-      }
-    } else {
-      if (Math.abs(diffY) > minSwipeDistance) {
+      } else {
         onDirectionChange(diffY > 0 ? Direction.DOWN : Direction.UP);
       }
+      // Re-anchor to current touch point for continuous fluid steering
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+      };
     }
+  };
+
+  const handleTouchEnd = () => {
     touchStartRef.current = null;
   };
   
@@ -128,7 +134,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ snake, items, onDirectionChange }
   return (
     <div 
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       className="grid bg-[#0a0f1d]/95 p-1 rounded-xl border-4 border-teal-800/60 shadow-[0_0_35px_rgba(13,148,136,0.25)] backdrop-blur-md touch-none select-none"
       style={{
         gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
