@@ -120,7 +120,7 @@ export function subscribeToGlobalLeaderboard(callback: (entries: HighScoreEntry[
 }
 
 export async function addGlobalHighScore(name: string, score: number): Promise<void> {
-  const sanitizedName = (name.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 5)) || 'ANON';
+  const sanitizedName = (name.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 3)) || 'AAA';
   const scoreId = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const docRef = doc(db, LEADERBOARD_COLLECTION, scoreId);
 

@@ -53,6 +53,7 @@ const App: React.FC = () => {
   const [reverbActive, setReverbActive] = useState(false);
   const [delayActive, setDelayActive] = useState(false);
   const [selectedProgression, setSelectedProgression] = useState('pop-anthem');
+  const [isBeatEnabled, setIsBeatEnabled] = useState(true);
 
   // AI Commentary State
   const [aiComment, setAiComment] = useState<string | null>(null);
@@ -69,6 +70,7 @@ const App: React.FC = () => {
   const isGameOverRef = useRef<boolean>(false);
   const reverbRef = useRef<boolean>(false);
   const delayRef = useRef<boolean>(false);
+  const isBeatEnabledRef = useRef<boolean>(true);
 
   // Keep refs in sync with reactive state
   useEffect(() => { snakeRef.current = snake; }, [snake]);
@@ -79,6 +81,16 @@ const App: React.FC = () => {
   useEffect(() => { isGameOverRef.current = isGameOver; }, [isGameOver]);
   useEffect(() => { reverbRef.current = reverbActive; }, [reverbActive]);
   useEffect(() => { delayRef.current = delayActive; }, [delayActive]);
+  useEffect(() => { isBeatEnabledRef.current = isBeatEnabled; }, [isBeatEnabled]);
+
+  // Sync Drum Beat with game play/pause/gameover state
+  useEffect(() => {
+    if (!isPaused && !isGameOver && isBeatEnabled) {
+      audioService.startBeat();
+    } else {
+      audioService.stopBeat();
+    }
+  }, [isPaused, isGameOver, isBeatEnabled]);
 
   // Warm up audio service & subscribe to live worldwide leaderboard
   useEffect(() => {
@@ -94,8 +106,14 @@ const App: React.FC = () => {
 
     return () => {
       unsubscribe();
+      audioService.stopBeat();
     };
   }, []);
+
+  const toggleBeat = () => {
+    audioService.initialize();
+    setIsBeatEnabled(prev => !prev);
+  };
 
   const resetGame = () => {
     audioService.initialize(); 
@@ -137,7 +155,7 @@ const App: React.FC = () => {
   };
 
   const saveHighScore = async (name: string) => {
-    const trimmed = name.toUpperCase().slice(0, 5);
+    const trimmed = name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'AAA';
     const newEntry: HighScoreEntry = {
       name: trimmed,
       score,
@@ -462,23 +480,43 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Stats & Progression Row */}
-                <div className="flex justify-between items-center text-xs font-mono">
-                    <div className="flex gap-4">
+                {/* Stats, Beat Toggle & Progression Row */}
+                <div className="flex flex-wrap justify-between items-center gap-2 text-xs font-mono">
+                    <div className="flex gap-4 items-center">
                         <p className="text-teal-400/80">SCORE: <span className="text-yellow-400 font-bold text-sm">{score}</span></p>
                     </div>
                     
-                    <div className="flex items-center gap-1.5">
-                        <Music size={11} className="text-yellow-400" />
-                        <select 
-                            value={selectedProgression}
-                            onChange={handleProgressionChange}
-                            className="bg-[#090f1c] text-yellow-300 border border-teal-700/60 rounded px-2 py-0.5 text-[10px] outline-none focus:border-yellow-400 cursor-pointer shadow-sm"
+                    <div className="flex items-center gap-2">
+                        {/* 4-on-the-Floor Drum Beat Toggle */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.currentTarget.blur();
+                            toggleBeat();
+                          }}
+                          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all border cursor-pointer select-none ${
+                            isBeatEnabled 
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/80 shadow-[0_0_10px_rgba(16,185,129,0.35)]' 
+                              : 'bg-[#090f1c] text-teal-400/50 border-teal-800/50 hover:text-teal-200'
+                          }`}
+                          title="Toggle 4-on-the-floor synth drum beat"
                         >
-                            {Object.entries(PROGRESSIONS).map(([key, data]) => (
-                            <option key={key} value={key}>{data.name}</option>
-                            ))}
-                        </select>
+                          <span className={isBeatEnabled && !isPaused && !isGameOver ? 'animate-pulse' : ''}>🥁</span>
+                          <span>BEAT: {isBeatEnabled ? 'ON' : 'OFF'}</span>
+                        </button>
+
+                        <div className="flex items-center gap-1">
+                          <Music size={11} className="text-yellow-400 shrink-0" />
+                          <select 
+                              value={selectedProgression}
+                              onChange={handleProgressionChange}
+                              className="bg-[#090f1c] text-yellow-300 border border-teal-700/60 rounded px-1.5 py-0.5 text-[10px] outline-none focus:border-yellow-400 cursor-pointer shadow-sm max-w-[125px] sm:max-w-none truncate"
+                          >
+                              {Object.entries(PROGRESSIONS).map(([key, data]) => (
+                              <option key={key} value={key}>{data.name}</option>
+                              ))}
+                          </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -511,11 +549,11 @@ const App: React.FC = () => {
                             <form onSubmit={handleModalSave} className="flex gap-2 w-full">
                               <input
                                 type="text"
-                                maxLength={5}
+                                maxLength={3}
                                 value={inModalName}
-                                onChange={(e) => setInModalName(e.target.value.toUpperCase())}
-                                placeholder="YOUR NAME"
-                                className="w-full bg-[#080d18] border border-teal-600/70 rounded px-2.5 py-1 text-xs font-mono text-yellow-300 uppercase focus:border-yellow-400 outline-none text-center"
+                                onChange={(e) => setInModalName(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                                placeholder="AAA"
+                                className="w-full bg-[#080d18] border border-teal-600/70 rounded px-2.5 py-1 text-sm font-mono text-yellow-300 uppercase tracking-[0.3em] font-bold focus:border-yellow-400 outline-none text-center"
                                 autoFocus
                               />
                               <button 
