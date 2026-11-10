@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { Point, GameItem, ItemType, Direction } from '../types';
 import { GRID_SIZE } from '../constants';
 
@@ -9,41 +9,67 @@ interface GameBoardProps {
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ snake, items, onDirectionChange }) => {
-  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      touchStartRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
-      };
-    }
-  };
+  // Attach native non-passive touch listeners to completely lock out mobile page scrolling
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartRef.current || !onDirectionChange) return;
-    const touch = e.touches[0];
-    const diffX = touch.clientX - touchStartRef.current.x;
-    const diffY = touch.clientY - touchStartRef.current.y;
-    const threshold = 18; // Rapid 18px threshold
-
-    if (Math.abs(diffX) > threshold || Math.abs(diffY) > threshold) {
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        onDirectionChange(diffX > 0 ? Direction.RIGHT : Direction.LEFT);
-      } else {
-        onDirectionChange(diffY > 0 ? Direction.DOWN : Direction.UP);
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        // Crucial: Stops iOS Safari from initiating a page scroll gesture
+        e.preventDefault();
+        touchStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
       }
-      // Re-anchor to current touch point for continuous fluid steering
-      touchStartRef.current = {
-        x: touch.clientX,
-        y: touch.clientY,
-      };
-    }
-  };
+    };
 
-  const handleTouchEnd = () => {
-    touchStartRef.current = null;
-  };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current || !onDirectionChange) return;
+      // Crucial: Prevents browser scrolling/bouncing while finger is moving on the board
+      e.preventDefault();
+      
+      const touch = e.touches[0];
+      const diffX = touch.clientX - touchStartRef.current.x;
+      const diffY = touch.clientY - touchStartRef.current.y;
+      const threshold = 14; // Ultra responsive 14px threshold
+
+      if (Math.abs(diffX) > threshold || Math.abs(diffY) > threshold) {
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          onDirectionChange(diffX > 0 ? Direction.RIGHT : Direction.LEFT);
+        } else {
+          onDirectionChange(diffY > 0 ? Direction.DOWN : Direction.UP);
+        }
+        // Re-anchor to current position for continuous fluid multi-swipes
+        touchStartRef.current = {
+          x: touch.clientX,
+          y: touch.clientY,
+        };
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      touchStartRef.current = null;
+    };
+
+    // Use passive: false so e.preventDefault() is honored by iOS Safari & Android Chrome
+    el.addEventListener('touchstart', handleTouchStart, { passive: false });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    el.addEventListener('touchend', handleTouchEnd, { passive: false });
+    el.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('touchend', handleTouchEnd);
+      el.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [onDirectionChange]);
   
   const isSnakeBody = (x: number, y: number) => {
     return snake.some((segment, index) => {
@@ -133,15 +159,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ snake, items, onDirectionChange }
 
   return (
     <div 
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-      className="grid bg-[#0a0f1d]/95 p-1 rounded-xl border-4 border-teal-800/60 shadow-[0_0_35px_rgba(13,148,136,0.25)] backdrop-blur-md touch-none select-none"
+      ref={containerRef}
+      className="grid bg-[#0a0f1d]/95 p-1 rounded-xl border-4 border-teal-800/60 shadow-[0_0_35px_rgba(13,148,136,0.25)] backdrop-blur-md touch-none select-none overscroll-none"
       style={{
         gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
         width: 'min(88vw, 360px)',
         aspectRatio: '1/1',
+        touchAction: 'none',
       }}
     >
       {cells}

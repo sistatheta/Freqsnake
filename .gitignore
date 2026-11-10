@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Chat media attachments and screen recordings
+public/assets/aistudio/Screenshot_*
+public/assets/aistudio/ScreenRecording_*
+*.mp4
+*.MP4
+*.mov
+*.MOV

@@ -3,6 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // In cloud preview iframe, Vite HMR WebSocket is not available. Provide silent mock so dev server client never errors.
+      (function() {
+        const NativeWS = window.WebSocket;
+        if (!NativeWS) return;
+        window.WebSocket = function(url, protocols) {
+          if (typeof url === 'string' && (url.includes('vite') || url.includes('run.app') || url.includes('3000'))) {
+            const handlers = {};
+            const fake = {
+              url: url,
+              readyState: 1, // OPEN
+              CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3,
+              binaryType: 'blob', bufferedAmount: 0, extensions: '', protocol: '',
+              send: function() {},
+              close: function() {},
+              addEventListener: function(type, fn) {
+                if (!handlers[type]) handlers[type] = [];
+                handlers[type].push(fn);
+                if (type === 'open') setTimeout(() => { try { fn(new Event('open')); } catch (_) {} }, 10);
+              },
+              removeEventListener: function(type, fn) {
+                if (handlers[type]) handlers[type] = handlers[type].filter(h => h !== fn);
+              },
+              dispatchEvent: function() { return true; },
+              onopen: null, onclose: null, onerror: null, onmessage: null
+            };
+            setTimeout(() => {
+              if (typeof fake.onopen === 'function') {
+                try { fake.onopen(new Event('open')); } catch (_) {}
+              }
+            }, 10);
+            return fake;
+          }
+          return new NativeWS(url, protocols);
+        };
+        window.WebSocket.prototype = NativeWS.prototype;
+        window.WebSocket.CONNECTING = 0;
+        window.WebSocket.OPEN = 1;
+        window.WebSocket.CLOSING = 2;
+        window.WebSocket.CLOSED = 3;
+      })();
+    </script>
     <title>Play Snake Online Free — Freq Snake Retro Synth Arcade</title>
     <meta name="description" content="Play snake online free with Freq Snake! Enjoy the classic retro arcade snake game enhanced with real-time synthesizer chords, musical scales, audio effects, and a live worldwide leaderboard." />
     <meta name="keywords" content="play snake online free, snake online free, free snake game, play snake game, retro snake, synth snake, google snake, arcade snake game" />
@@ -55,7 +97,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-      body {
+      html, body {
         font-family: 'Press Start 2P', system-ui, sans-serif;
         background-color: #0a0e17;
         color: #fff;
@@ -63,6 +105,7 @@
         padding: 0;
         min-height: 100vh;
         overflow-x: hidden;
+        overscroll-behavior: none;
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
         user-select: none;
